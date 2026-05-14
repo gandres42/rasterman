@@ -12,6 +12,9 @@ ros-jazzy-desktop = ">=0.11.0,<0.12"
 ros-jazzy-foxglove-bridge = ">=3.2.4,<4"
 ros-jazzy-rmw-zenoh-cpp = ">=0.2.9,<0.3"
 colcon-common-extensions = ">=0.3.0,<0.4"
+ffmpeg = ">=8.0.1,<9"
+nano = ">=9.0,<10"
 
 [pypi-dependencies]
 opencv-python = "*"
+rembg = { version = ">=2.0.75, <3", extras = ["gpu"] }
