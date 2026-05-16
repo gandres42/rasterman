@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing</title>
+    <link rel="stylesheet" href="style/xp.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #ECE9D8;
+        }
+
+        .window {
+            width: 100vw;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .images-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 0px;
+        }
+
+        .image-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: auto;
+            background-color: #fff;
+            padding: 6px;
+            flex: 1;
+        }
+
+        .square-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        fieldset {
+            border: 2px solid #000;
+            padding: 15px;
+        }
+
+        legend {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .controls-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-group {
+            width: auto;
+            min-width: 150px;
+        }
+
+        .save-button-container {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Window container -->
+    <div class="window">
+        <!-- Title Bar -->
+        <div class="title-bar pywebview-drag-region">
+            <span class="title-bar-text">Rasterman</span>
+            <div class="title-bar-controls">
+                <button aria-label="Minimize"></button>
+                <button aria-label="Maximize"></button>
+                <button aria-label="Close"></button>
+            </div>
+        </div>
+
+        <!-- Window Body -->
+        <div class="window-body">
+    <!-- Two square images side by side -->
+    <div class="images-container">
+        <fieldset class="image-wrapper" style="margin: 0;">
+            <legend>Original Image</legend>
+            <img src="lighthouse.jpg" alt="Original Image" class="square-image">
+        </fieldset>
+        <fieldset class="image-wrapper" style="margin: 0;">
+            <legend>Processed Result</legend>
+            <img src="lighthouse.jpg" alt="Result Image" class="square-image">
+        </fieldset>
+    </div>
+
+    <!-- Control Panel -->
+    <fieldset style="margin-top: 5px;">
+        <legend>Controls</legend>
+        
+        <div class="controls-grid">
+            <!-- Threshold Limit Slider -->
+            <div class="control-group field-row-stacked">
+                <label for="threshold-limit">Threshold: <span id="threshold-value">128</span></label>
+                <input type="range" id="threshold-limit" min="0" max="255" value="128">
+            </div>
+
+            <!-- Threshold Menu Dropdown -->
+            <div class="control-group field-row-stacked">
+                <label for="threshold-type">Threshold Type</label>
+                <select id="threshold-type">
+                    <option value="cv2.THRESH_BINARY">cv2.THRESH_BINARY</option>
+                    <option value="cv2.THRESH_BINARY_INV">cv2.THRESH_BINARY_INV</option>
+                    <option value="cv2.THRESH_TRUNC">cv2.THRESH_TRUNC</option>
+                    <option value="cv2.THRESH_TOZERO">cv2.THRESH_TOZERO</option>
+                    <option value="cv2.THRESH_TOZERO_INV">cv2.THRESH_TOZERO_INV</option>
+                </select>
+            </div>
+
+            <!-- Remove Background Dropdown -->
+            <div class="control-group field-row-stacked">
+                <label for="remove-background">Remove Background</label>
+                <select id="remove-background" style="width: 100%;">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                </select>
+            </div>
+
+            <!-- Result Size Number Select -->
+            <div class="control-group field-row-stacked">
+                <label for="result-size">Result Size</label>
+                <input type="number" id="result-size" value="512" min="64" max="4096" step="64">
+            </div>
+
+            <!-- Save Button -->
+            <div class="save-button-container">
+                <button id="save-btn">Save</button>
+            </div>
+        </div>
+    </fieldset>
+
+    <script>
+        const thresholdSlider = document.getElementById('threshold-limit');
+        const thresholdValue = document.getElementById('threshold-value');
+        
+        if (thresholdSlider && thresholdValue) {
+            thresholdSlider.addEventListener('input', function() {
+                thresholdValue.textContent = this.value;
+            });
+        }
+    </script>
+        </div>
+    </div>
+</body>
+</html>
