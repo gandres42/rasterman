@@ -36,15 +36,18 @@
             background-color: #fff;
             padding: 6px;
             flex: 1;
+            aspect-ratio: 1 / 1;
         }
 
         .square-image {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
             border-radius: 4px;
+        }
+        
+        .square-image:not([src]) {
+            opacity: 0;
         }
 
         fieldset {
@@ -57,22 +60,29 @@
             font-weight: bold;
         }
 
-        .controls-grid {
-            display: flex;
-            flex-wrap: wrap;
+        .control-panel-layout {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            align-items: center;
         }
 
         .control-group {
             width: auto;
-            min-width: 150px;
         }
 
         .save-button-container {
             display: flex;
-            align-items: center;
-            margin-left: auto;
+        }
+        
+        .save-button-container button {
+            height: 100%;
+            width: 80px;
         }
 
         .control-group label {
@@ -99,9 +109,9 @@
         <div class="title-bar pywebview-drag-region">
             <span class="title-bar-text">Rasterman</span>
             <div class="title-bar-controls">
-                <button aria-label="Minimize"></button>
-                <button aria-label="Maximize"></button>
-                <button aria-label="Close"></button>
+                <button aria-label="Minimize" id="btn-minimize"></button>
+                <button aria-label="Maximize" id="btn-maximize"></button>
+                <button aria-label="Close" id="btn-close"></button>
             </div>
         </div>
 
@@ -111,11 +121,14 @@
     <div class="images-container">
         <fieldset class="image-wrapper" style="margin: 0;">
             <legend>Original Image</legend>
-            <img src="lighthouse.jpg" alt="Original Image" class="square-image">
+            <img alt="Original Image" class="square-image">
         </fieldset>
-        <fieldset class="image-wrapper" style="margin: 0;">
+        <fieldset class="image-wrapper" style="margin: 0; position: relative;">
             <legend>Processed Result</legend>
-            <img src="lighthouse.jpg" alt="Result Image" class="square-image">
+            <img alt="Result Image" class="square-image">
+            <div id="loading-overlay" style="display: none; position: absolute; inset: 0; background: rgba(236, 233, 216, 0.7); justify-content: center; align-items: center; border-radius: 4px;">
+                <span>Loading...</span>
+            </div>
         </fieldset>
     </div>
 
@@ -123,7 +136,14 @@
     <fieldset style="margin-top: 5px;">
         <legend>Controls</legend>
         
-        <div class="controls-grid">
+        <div class="control-panel-layout">
+            <div class="options-grid">
+                <!-- Select Image -->
+                <div class="control-group field-row-stacked">
+                    <label>Source Image</label>
+                    <button id="select-image-btn" style="width: 100%; height: 26px;">Browse...</button>
+                </div>
+
             <!-- Threshold Limit Slider -->
             <div class="control-group field-row-stacked">
                 <label for="threshold-limit">Threshold: <span id="threshold-value">128</span></label>
@@ -142,6 +162,18 @@
                 </select>
             </div>
 
+            <!-- Downsampling Method Dropdown -->
+            <div class="control-group field-row-stacked">
+                <label for="downsample-method">Downsample Method</label>
+                <select id="downsample-method" style="width: 100%;">
+                    <option value="cv2.INTER_AREA">INTER_AREA</option>
+                    <option value="cv2.INTER_LINEAR">INTER_LINEAR</option>
+                    <option value="cv2.INTER_CUBIC">INTER_CUBIC</option>
+                    <option value="cv2.INTER_NEAREST">INTER_NEAREST</option>
+                    <option value="cv2.INTER_LANCZOS4">INTER_LANCZOS4</option>
+                </select>
+            </div>
+
             <!-- Remove Background Dropdown -->
             <div class="control-group field-row-stacked">
                 <label for="remove-background">Remove Background</label>
@@ -151,11 +183,26 @@
                 </select>
             </div>
 
+            <!-- REMBG Model Dropdown -->
+            <div class="control-group field-row-stacked">
+                <label for="rembg-model">Rembg Model</label>
+                <select id="rembg-model" style="width: 100%;">
+                    <option value="u2net">u2net</option>
+                    <option value="u2netp">u2netp</option>
+                    <option value="u2net_human_seg">u2net_human_seg</option>
+                    <option value="u2net_cloth_seg">u2net_cloth_seg</option>
+                    <option value="silueta">silueta</option>
+                    <option value="isnet-general-use">isnet-general-use</option>
+                    <option value="isnet-anime">isnet-anime</option>
+                </select>
+            </div>
+
             <!-- Result Size Number Select -->
             <div class="control-group field-row-stacked">
                 <label for="result-size">Result Size</label>
                 <input type="number" id="result-size" value="512" min="64" max="4096" step="64">
             </div>
+            </div> <!-- End options-grid -->
 
             <!-- Save Button -->
             <div class="save-button-container">
@@ -167,12 +214,91 @@
     <script>
         const thresholdSlider = document.getElementById('threshold-limit');
         const thresholdValue = document.getElementById('threshold-value');
+        const thresholdType = document.getElementById('threshold-type');
+        const removeBg = document.getElementById('remove-background');
+        const rembgModel = document.getElementById('rembg-model');
+        const downsampleMethod = document.getElementById('downsample-method');
+        const resultSize = document.getElementById('result-size');
+        const originalImage = document.querySelector('.images-container fieldset:first-child img');
+        const resultImage = document.querySelector('.images-container fieldset:last-child img');
+        const loadingOverlay = document.getElementById('loading-overlay');
         
+        const updateImage = () => {
+            if (window.pywebview && window.pywebview.api) {
+                if (removeBg.value === 'true') {
+                    loadingOverlay.style.display = 'flex';
+                }
+                window.pywebview.api.process_image(
+                    thresholdSlider.value,
+                    thresholdType.value,
+                    removeBg.value,
+                    rembgModel.value,
+                    downsampleMethod.value,
+                    resultSize.value
+                ).then(data => {
+                    loadingOverlay.style.display = 'none';
+                    if (data && data.startsWith('data:')) {
+                        resultImage.src = data;
+                    } else if (!data) {
+                        resultImage.removeAttribute('src');
+                    }
+                }).catch(() => {
+                    loadingOverlay.style.display = 'none';
+                });
+            }
+        };
+
         if (thresholdSlider && thresholdValue) {
             thresholdSlider.addEventListener('input', function() {
                 thresholdValue.textContent = this.value;
+                updateImage(); // Update on drag
             });
         }
+
+        // Trigger updates when other controls change
+        [thresholdType, removeBg, rembgModel, downsampleMethod, resultSize].forEach(ctrl => {
+            if (ctrl) ctrl.addEventListener('change', updateImage);
+        });
+
+        window.addEventListener('pywebviewready', function() {
+            // Wait for user to select an image
+        });
+
+        // Window Controls
+        document.getElementById('btn-minimize').addEventListener('click', () => {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.minimize();
+            }
+        });
+
+        document.getElementById('btn-maximize').addEventListener('click', () => {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.maximize();
+            }
+        });
+
+        document.getElementById('btn-close').addEventListener('click', () => {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.close();
+            }
+        });
+
+        document.getElementById('select-image-btn').addEventListener('click', () => {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.select_image().then(dataUrl => {
+                    if (dataUrl) {
+                        originalImage.src = dataUrl;
+                        updateImage();
+                    }
+                });
+            }
+        });
+
+        document.getElementById('save-btn').addEventListener('click', () => {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.save_image();
+            }
+        });
     </script>
         </div>
     </div>
