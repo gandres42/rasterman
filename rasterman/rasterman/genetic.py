@@ -24,13 +24,13 @@ class Block:
         occupied = []
         match self.rotation:
             case Orientation.UP:
-                occupied = [(self.position[0] - l, self.position[1]) for l in range(self.length)]
+                occupied = [(self.position[1] - l, self.position[0]) for l in range(self.length)]
             case Orientation.DOWN:
-                occupied = [(self.position[0] + l, self.position[1]) for l in range(self.length)]
+                occupied = [(self.position[1] + l, self.position[0]) for l in range(self.length)]
             case Orientation.LEFT:
-                occupied = [(self.position[0], self.position[1] - l) for l in range(self.length)]
+                occupied = [(self.position[1], self.position[0] - l) for l in range(self.length)]
             case Orientation.RIGHT:
-                occupied = [(self.position[0], self.position[1] + l) for l in range(self.length)]
+                occupied = [(self.position[1], self.position[0] + l) for l in range(self.length)]
         return occupied
 
 class Grid:
@@ -56,8 +56,11 @@ def main():
 
     grid = Grid(8)
     test_block = Block(3)
-    test_block.set_pose((1, 1), Orientation.UP)
+    test_block.set_pose((0, 1), Orientation.DOWN)
+    test_block1 = Block(5)
+    test_block1.set_pose((2, 1), Orientation.RIGHT)
     grid.add_block(test_block)
+    grid.add_block(test_block1)
     img = grid.image()
 
     cv2.imshow("template", img)
