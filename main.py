@@ -1,5 +1,4 @@
 import os
-# Ensure fractional scaling is passed through to WebEngine correctly (e.g. on Linux KDE Wayland)
 os.environ["QT_SCALE_FACTOR_ROUNDING_POLICY"] = "PassThrough"
 os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
 
@@ -141,5 +140,5 @@ class Api:
             cv2.imwrite(target_path, img_to_save)
 
 api = Api()
-window = webview.create_window('Rasterman', '../resource/index.html', js_api=api, frameless=True, easy_drag=False)
+window = webview.create_window('Rasterman', 'index.html', js_api=api, frameless=True, easy_drag=False)
 webview.start()
