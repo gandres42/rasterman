@@ -53,6 +53,7 @@ class Grid:
         quats = []
         lens = []
 
+        # center_offset = np.array([-self.size / 2, - self.size / 2])
         for block in self.blocks:
             match block.rotation:
                 case Orientation.UP:
@@ -60,13 +61,13 @@ class Grid:
                     rot = 0
                 case Orientation.RIGHT:
                     offset = np.array([block.length / 2, 0.5])
-                    rot = 90
+                    rot = 270
                 case Orientation.DOWN:
                     offset = np.array([0.5, block.length / 2])
                     rot = 180
                 case Orientation.LEFT:
                     offset = np.array([(-block.length / 2) + 1, 0.5])
-                    rot = 270
+                    rot = 90
             
             centroid = np.array([block.position[0], block.position[1]]) + offset
             centroids.append(centroid.flatten())
