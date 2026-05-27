@@ -2,10 +2,6 @@ import cv2
 import numpy as np
 from enum import Enum
 from scipy.spatial.transform import Rotation as sr
-import rclpy
-from rclpy.node import Node
-
-cv2.namedWindow("template", cv2.WINDOW_NORMAL)
 
 class Orientation(Enum):
     UP = 0
@@ -13,11 +9,11 @@ class Orientation(Enum):
     LEFT = 2
     RIGHT = 3
 
-class Block:
-    def __init__(self, length):
+class GridBlock:
+    def __init__(self, length, position = (0, 0), rotation = Orientation.UP):
         self.length = length
-        self.position = (0, 0)
-        self.rotation = Orientation.UP
+        self.position = position
+        self.rotation = rotation
 
     def set_pose(self, new_position, new_rotation):
         self.position = new_position
@@ -38,10 +34,10 @@ class Block:
 
 class Grid:
     def __init__(self, size):
-        self.blocks: list[Block] = []
+        self.blocks: list[GridBlock] = []
         self.size = size
 
-    def add_block(self, block: Block):
+    def add_block(self, block: GridBlock):
         self.blocks.append(block)
 
     def image(self):
@@ -52,62 +48,29 @@ class Grid:
                     img[space[0], space[1]] = 0
         return img
 
-    def centroids(self):
+    def poses(self):
         centroids = []
+        quats = []
+        lens = []
+
         for block in self.blocks:
             match block.rotation:
                 case Orientation.UP:
                     offset = np.array([0.5, (-block.length / 2) + 1])
-                case Orientation.DOWN:
-                    offset = np.array([0.5, block.length / 2])
-                case Orientation.LEFT:
-                    offset = np.array([(-block.length / 2) + 1, 0.5])
+                    rot = 0
                 case Orientation.RIGHT:
                     offset = np.array([block.length / 2, 0.5])
+                    rot = 90
+                case Orientation.DOWN:
+                    offset = np.array([0.5, block.length / 2])
+                    rot = 180
+                case Orientation.LEFT:
+                    offset = np.array([(-block.length / 2) + 1, 0.5])
+                    rot = 270
             
             centroid = np.array([block.position[0], block.position[1]]) + offset
-            centroids.append(centroid)
-        return centroids
-
-class MinimalNode(Node):
-    def __init__(self):
-        super().__init__('minimal_node')
-        # self.create_publisher(clear)
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = MinimalNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
-
-# def main():
-#     template = cv2.imread('result.jpg')
-#     if template is None: return
-
-#     grid = Grid(8)
-#     test_block = Block(3)
-#     test_block.set_pose((3,3), Orientation.DOWN)
-#     test_block1 = Block(5)
-#     test_block1.set_pose((2, 1), Orientation.RIGHT)
-#     grid.add_block(test_block)
-#     grid.add_block(test_block1)
-#     img = grid.image()
-
-
-#     scale = 100
-#     image = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_GRAY2RGB)
-#     image = cv2.resize(image, (img.shape[0] * scale, img.shape[1] * scale), interpolation=cv2.INTER_NEAREST)
-#     for centroid in grid.centroids():
-#         centroid = centroid.flatten()
-#         image = cv2.circle(image, (int(centroid[0] * scale), int(centroid[1] * scale)), radius=0, color=(0, 0, 255), thickness=25)
-#     print(grid.centroids())
-
-#     cv2.imshow("template", image)
-#     cv2.waitKey(0)
-
-# if __name__ == '__main__':
-#     main()
+            centroids.append(centroid.flatten())
+            quat = sr.from_euler('xyz', (0, 0, rot), degrees=True).as_quat()
+            quats.append(quat)
+            lens.append(block.length)
+        return centroids, quats, lens
