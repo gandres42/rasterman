@@ -20,3 +20,4 @@ qtwebkit = ">=5.212,<6"
 pywebview = { version = ">=6.2.1, <7", extras = ["qt"] }
 rembg = { version = ">=2.0.75, <3", extras = ["cpu"] }
 opencv-python = "*"
+scipy = ">=1.17.1, <2"

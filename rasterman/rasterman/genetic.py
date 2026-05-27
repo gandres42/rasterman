@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from enum import Enum
 from scipy.spatial.transform import Rotation as sr
+import rclpy
+from rclpy.node import Node
 
 cv2.namedWindow("template", cv2.WINDOW_NORMAL)
 
@@ -67,30 +69,45 @@ class Grid:
             centroids.append(centroid)
         return centroids
 
-def main():
-    template = cv2.imread('result.jpg')
-    if template is None: return
+class MinimalNode(Node):
+    def __init__(self):
+        super().__init__('minimal_node')
+        # self.create_publisher(clear)
 
-    grid = Grid(8)
-    test_block = Block(3)
-    test_block.set_pose((3,3), Orientation.DOWN)
-    test_block1 = Block(5)
-    test_block1.set_pose((2, 1), Orientation.RIGHT)
-    grid.add_block(test_block)
-    grid.add_block(test_block1)
-    img = grid.image()
-
-
-    scale = 100
-    image = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_GRAY2RGB)
-    image = cv2.resize(image, (img.shape[0] * scale, img.shape[1] * scale), interpolation=cv2.INTER_NEAREST)
-    for centroid in grid.centroids():
-        centroid = centroid.flatten()
-        image = cv2.circle(image, (int(centroid[0] * scale), int(centroid[1] * scale)), radius=0, color=(0, 0, 255), thickness=25)
-    print(grid.centroids())
-
-    cv2.imshow("template", image)
-    cv2.waitKey(0)
+def main(args=None):
+    rclpy.init(args=args)
+    node = MinimalNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
+
+# def main():
+#     template = cv2.imread('result.jpg')
+#     if template is None: return
+
+#     grid = Grid(8)
+#     test_block = Block(3)
+#     test_block.set_pose((3,3), Orientation.DOWN)
+#     test_block1 = Block(5)
+#     test_block1.set_pose((2, 1), Orientation.RIGHT)
+#     grid.add_block(test_block)
+#     grid.add_block(test_block1)
+#     img = grid.image()
+
+
+#     scale = 100
+#     image = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_GRAY2RGB)
+#     image = cv2.resize(image, (img.shape[0] * scale, img.shape[1] * scale), interpolation=cv2.INTER_NEAREST)
+#     for centroid in grid.centroids():
+#         centroid = centroid.flatten()
+#         image = cv2.circle(image, (int(centroid[0] * scale), int(centroid[1] * scale)), radius=0, color=(0, 0, 255), thickness=25)
+#     print(grid.centroids())
+
+#     cv2.imshow("template", image)
+#     cv2.waitKey(0)
+
+# if __name__ == '__main__':
+#     main()
