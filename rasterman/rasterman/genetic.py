@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from enum import Enum
+from scipy.spatial.transform import Rotation as sr
 
 cv2.namedWindow("template", cv2.WINDOW_NORMAL)
 
@@ -49,6 +50,22 @@ class Grid:
                     img[space[0], space[1]] = 0
         return img
 
+    def centroids(self):
+        centroids = []
+        for block in self.blocks:
+            match block.rotation:
+                case Orientation.UP:
+                    offset = np.array([0.5, (-block.length / 2) + 1])
+                case Orientation.DOWN:
+                    offset = np.array([0.5, block.length / 2])
+                case Orientation.LEFT:
+                    offset = np.array([(-block.length / 2) + 1, 0.5])
+                case Orientation.RIGHT:
+                    offset = np.array([block.length / 2, 0.5])
+            
+            centroid = np.array([block.position[0], block.position[1]]) + offset
+            centroids.append(centroid)
+        return centroids
 
 def main():
     template = cv2.imread('result.jpg')
@@ -56,14 +73,23 @@ def main():
 
     grid = Grid(8)
     test_block = Block(3)
-    test_block.set_pose((0, 1), Orientation.DOWN)
+    test_block.set_pose((3,3), Orientation.DOWN)
     test_block1 = Block(5)
     test_block1.set_pose((2, 1), Orientation.RIGHT)
     grid.add_block(test_block)
     grid.add_block(test_block1)
     img = grid.image()
 
-    cv2.imshow("template", img)
+
+    scale = 100
+    image = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_GRAY2RGB)
+    image = cv2.resize(image, (img.shape[0] * scale, img.shape[1] * scale), interpolation=cv2.INTER_NEAREST)
+    for centroid in grid.centroids():
+        centroid = centroid.flatten()
+        image = cv2.circle(image, (int(centroid[0] * scale), int(centroid[1] * scale)), radius=0, color=(0, 0, 255), thickness=25)
+    print(grid.centroids())
+
+    cv2.imshow("template", image)
     cv2.waitKey(0)
 
 if __name__ == '__main__':
