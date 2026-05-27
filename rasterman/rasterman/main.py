@@ -114,16 +114,31 @@ class Api:
     def save_image(self):
         if self.last_result is None:
             return
+            
+        # Create a copy so we don't accidentally modify the active image in the app
+        img_to_save = self.last_result.copy()
+        
+        # Check if the image has an alpha channel (4 channels: BGRA)
+        if len(img_to_save.shape) == 3 and img_to_save.shape[2] == 4:
+            # Extract the alpha channel and normalize to 0.0 - 1.0
+            # Keeping the slice as 3: preserves the 3rd dimension for broadcasting
+            alpha = img_to_save[:, :, 3:] / 255.0 
+            bgr = img_to_save[:, :, :3]
+            
+            # Blend the BGR channels with a white background (255)
+            img_to_save = (alpha * bgr + (1 - alpha) * 255).astype(np.uint8)
         
         target_path = window.create_file_dialog(
             webview.SAVE_DIALOG, 
             directory='', 
-            save_filename='result.png'
+            save_filename='result.jpg'
         )
+        
+        # Save the processed image
         if target_path and isinstance(target_path, tuple):
-            cv2.imwrite(target_path[0], self.last_result)
+            cv2.imwrite(target_path[0], img_to_save)
         elif target_path:
-            cv2.imwrite(target_path, self.last_result)
+            cv2.imwrite(target_path, img_to_save)
 
 api = Api()
 window = webview.create_window('Rasterman', '../resource/index.html', js_api=api, frameless=True, easy_drag=False)
