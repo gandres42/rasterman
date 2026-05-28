@@ -21,9 +21,13 @@ class Rasterman(Node):
         self.create_timer(0.1, self.pub)
 
         self.grid = Grid(7, CONSTRUCTION_SIZE)
-        self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.UP))
-        self.grid.add_block(GridBlock(length=3, position=(1, 1), rotation=Orientation.DOWN))
-        self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.RIGHT))
+        # self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.RIGHT))
+
+        self.grid.add_block(GridBlock(length=3, position=(3, 2), rotation=Orientation.DOWN))
+
+        # self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.UP))
+        # self.grid.add_block(GridBlock(length=3, position=(1, 1), rotation=Orientation.DOWN))
+        # self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.RIGHT))
 
     def pub(self):
         centroids, quats, lens = self.grid.poses()
