@@ -33,9 +33,10 @@ class GridBlock:
         return occupied
 
 class Grid:
-    def __init__(self, size):
+    def __init__(self, size, real_size):
         self.blocks: list[GridBlock] = []
         self.size = size
+        self.ratio = real_size / size
 
     def add_block(self, block: GridBlock):
         self.blocks.append(block)

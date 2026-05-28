@@ -8,6 +8,8 @@ from cc_interfaces.msg import Block, StructurePlan
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
+CONSTRUCTION_SIZE = 2
+
 class Rasterman(Node):
     def __init__(self):
         super().__init__('rasterman')
@@ -18,10 +20,10 @@ class Rasterman(Node):
         self.viz_pub = self.create_publisher(Image, "rasterman/viz", 10)
         self.create_timer(0.1, self.pub)
 
-        self.grid = Grid(7)
+        self.grid = Grid(7, 1)
         self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.UP))
         self.grid.add_block(GridBlock(length=3, position=(1, 1), rotation=Orientation.DOWN))
-        self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.LEFT))
+        self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.RIGHT))
 
     def pub(self):
         centroids, quats, lens = self.grid.poses()
@@ -31,8 +33,8 @@ class Rasterman(Node):
         poses = []
         for centroid, quat, length in zip(centroids, quats, lens):
             centroid_point = Point()
-            centroid_point.x = -centroid[1] + (self.grid.size / 2)
-            centroid_point.y = -centroid[0] + (self.grid.size / 2)
+            centroid_point.x = (-centroid[1] + (self.grid.size / 2)) * self.grid.ratio
+            centroid_point.y = (-centroid[0] + (self.grid.size / 2)) * self.grid.ratio
 
             centroid_rot = Quaternion()
             centroid_rot.x = quat[0]
