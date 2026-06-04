@@ -15,19 +15,23 @@ class Rasterman(Node):
         super().__init__('rasterman')
         self.bridge = CvBridge()
 
-        self.struct_pub = self.create_publisher(StructurePlan, "rasterman/structure_plan", 10)
+        self.struct_pub = self.create_publisher(StructurePlan, "structure_plan", 10)
         self.posearray_pub = self.create_publisher(PoseArray, "rasterman/poses", 10)
         self.viz_pub = self.create_publisher(Image, "rasterman/viz", 10)
         self.create_timer(0.1, self.pub)
 
         self.grid = Grid(7, CONSTRUCTION_SIZE)
-        # self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.RIGHT))
+        self.grid.add_block(GridBlock(length=2, position=(0, 0), rotation=Orientation.RIGHT))
 
-        self.grid.add_block(GridBlock(length=3, position=(3, 2), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=3, position=(4, 2), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=1, position=(4, 4), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=1, position=(1, 5), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=1, position=(2, 5), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=2, position=(2, 4), rotation=Orientation.RIGHT))
 
-        # self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.UP))
-        # self.grid.add_block(GridBlock(length=3, position=(1, 1), rotation=Orientation.DOWN))
-        # self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.RIGHT))
+        self.grid.add_block(GridBlock(length=1, position=(3, 3), rotation=Orientation.UP))
+        self.grid.add_block(GridBlock(length=3, position=(1, 1), rotation=Orientation.DOWN))
+        self.grid.add_block(GridBlock(length=1, position=(6, 6), rotation=Orientation.RIGHT))
 
     def pub(self):
         centroids, quats, lens = self.grid.poses()

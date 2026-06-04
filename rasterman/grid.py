@@ -54,7 +54,8 @@ class Grid:
         quats = []
         lens = []
 
-        # center_offset = np.array([-self.size / 2, - self.size / 2])
+        offset = np.array([0, 0, 0])
+        rot = np.eye(3)
         for block in self.blocks:
             match block.rotation:
                 case Orientation.UP:
@@ -68,6 +69,7 @@ class Grid:
                     rot = 180
                 case Orientation.LEFT:
                     offset = np.array([(-block.length / 2) + 1, 0.5])
+                    
                     rot = 90
             
             centroid = np.array([block.position[0], block.position[1]]) + offset
@@ -76,3 +78,17 @@ class Grid:
             quats.append(quat)
             lens.append(block.length)
         return centroids, quats, lens
+
+
+    def valid_check(self):
+        count = np.zeros((self.size, self.size))
+        for block in self.blocks:
+            for space in block.occupied_spaces():
+                if space[0] >= 0 and space[0] < self.size and space[1] >= 0 and space[1] < self.size:
+                    if count[space[0], space[1]] == 1:
+                        return False
+                    else:
+                        count[space[0], space[1]] = 1
+                else:
+                    return False
+        return True
