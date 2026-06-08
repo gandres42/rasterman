@@ -49,7 +49,7 @@ class Grid:
             for space in block.occupied_spaces():
                 if space[0] >= 0 and space[0] < self.size and space[1] >= 0 and space[1] < self.size:
                     img[space[0], space[1]] = 0
-        return img
+        return (img == 0).astype(float)
 
     def poses(self):
         centroids = []
