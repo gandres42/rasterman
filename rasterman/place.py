@@ -30,6 +30,20 @@ class Generation:
         img = self.grid.image()
         return np.sum(np.abs(self.base_img - img))
 
+class Darwin:
+    def __init__(self, parallel_generations: int, base_grid: Grid, base_img: np.ndarray):
+        self.generations = [Generation(base_grid, base_img) for _ in range(parallel_generations)]
+
+    def mutate(self):
+        for gen in self.generations:
+            gen.mutate()
+    
+    def iterate(self):
+        gen_scores = [gen.score() for gen in self.generations]
+        best_idx = gen_scores.index(max(gen_scores))
+        self.generations = [deepcopy(self.generations[best_idx]) for _ in self.generations]
+
+
 def centroids_img(grid: Grid):
     centroids, quats, lens = grid.poses()
     img = 1 - grid.image()
@@ -45,18 +59,25 @@ def main():
     base_img = cv2.imread('result.jpg', cv2.IMREAD_GRAYSCALE)
     base_img = (base_img == 0).astype(float)  # ty:ignore[unresolved-attribute]
 
-    # update inventory
-    grid = Grid(base_img.shape[0], 2, 1, 2, 0)
-    # grid.add_block(GridBlock(length=2, position=(0, 0), rotation=Orientation.RIGHT))
-    # grid.add_block(GridBlock(length=1, position=(1, 0), rotation=Orientation.RIGHT))
+    # create starting grid
+    base_grid = Grid(base_img.shape[0], 2, 1, 2, 0)
 
+    # create genetic harness
+    trainer = Darwin(4, base_grid, base_img)
+
+    # run mutations
     cv2.namedWindow('centroids', cv2.WINDOW_NORMAL)
-    generation = Generation(grid, base_img)
-    for i in range(0, 100):
-        generation.mutate()
-        print(generation.score())
-        cv2.imshow('centroids', centroids_img(generation.grid))
-        cv2.waitKey(10)
+
+    for i in range(100):
+        for _ in range(100):
+            trainer.mutate()
+            frames = [centroids_img(gen.grid) for gen in trainer.generations]
+            gap = np.full((frames[0].shape[0], 10, 3), 128, dtype=np.uint8)
+            separated = frames[0:1] + [f for frame in frames[1:] for f in (gap, frame)]
+            cv2.imshow('centroids', np.hstack(separated))
+            cv2.waitKey(1)
+        trainer.iterate()
+        print(f"gen {i}")
 
 if __name__ == '__main__':
     main()
