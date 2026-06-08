@@ -71,35 +71,30 @@ class Api:
             down_interp_attr = downsample_str.split('.')[-1]
             down_interp = getattr(cv2, down_interp_attr, cv2.INTER_AREA)
 
-            # Scale down to logical size and scale back up to pixelate while retaining original dimensions
-            img = cv2.resize(img, (new_w, new_h), interpolation=down_interp)
-            img = cv2.resize(img, (w, h), interpolation=cv2.INTER_NEAREST)
-            
-            # 3. Apply threshold
-            # img might be 4-channel BGRA (if background was removed) or 3-channel BGR
-            if img.shape[2] == 4:
-                gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
-                alpha = img[:, :, 3]
-                # Threshold the alpha to prevent gray/semi-transparent pixels blending with background
-                _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
-            else:
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                alpha = None
+            # Scale down to logical size
+            img_small = cv2.resize(img, (new_w, new_h), interpolation=down_interp)
+            # Scale back up with nearest-neighbor for the pixelated display preview
+            img_display = cv2.resize(img_small, (w, h), interpolation=cv2.INTER_NEAREST)
 
-            # Get the threshold type value from cv2
             thresh_attr = threshold_type_str.split('.')[-1]
             thresh_type = getattr(cv2, thresh_attr, cv2.THRESH_BINARY)
-            
-            _, thresh = cv2.threshold(gray, int(threshold_val), 255, thresh_type)
-            
-            # Reconstruct final image
-            if alpha is not None:
-                result = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGRA)
-                result[:, :, 3] = alpha
-            else:
-                result = thresh
 
-            self.last_result = result
+            def apply_threshold(src):
+                if src.shape[2] == 4:
+                    gray = cv2.cvtColor(src, cv2.COLOR_BGRA2GRAY)
+                    alpha = src[:, :, 3]
+                    _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
+                    _, thresh = cv2.threshold(gray, int(threshold_val), 255, thresh_type)
+                    out = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGRA)
+                    out[:, :, 3] = alpha
+                else:
+                    gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+                    _, out = cv2.threshold(gray, int(threshold_val), 255, thresh_type)
+                return out
+
+            # Save at downsampled resolution; display at original resolution
+            self.last_result = apply_threshold(img_small)
+            result = apply_threshold(img_display)
             
             # 4. Encode to base64 for pywebview
             _, buffer = cv2.imencode('.png', result)
