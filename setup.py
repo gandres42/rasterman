@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'main = rasterman.simple:main'
+            'main = rasterman.simple:main',
+            'place = rasterman.place:main'
         ],
     },
 )

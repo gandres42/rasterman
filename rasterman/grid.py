@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from enum import Enum
 from scipy.spatial.transform import Rotation as sr
+from typing import Optional
 
 class Orientation(Enum):
     UP = 0
@@ -37,6 +38,7 @@ class Grid:
         self.blocks: list[GridBlock] = []
         self.size = size
         self.ratio = real_size / size
+        self._config_cache: dict[int, list] = {}
 
     def add_block(self, block: GridBlock):
         self.blocks.append(block)
@@ -92,3 +94,40 @@ class Grid:
                 else:
                     return False
         return True
+
+    def valid_configurations(self, block_length: int, current_pos: Optional[tuple], current_rot: Optional[Orientation]):
+        # get all possible configs
+        configs = []
+        if block_length in self._config_cache:
+            configs = self._config_cache[block_length]
+        else:
+            occupied = set()
+            for block in self.blocks:
+                for space in block.occupied_spaces():
+                    occupied.add(space)
+
+            for col in range(self.size):
+                for row in range(self.size):
+                    for rotation in Orientation:
+                        candidate = GridBlock(block_length, (col, row), rotation)
+                        spaces = candidate.occupied_spaces()
+                        if all(
+                            0 <= r < self.size and 0 <= c < self.size and (r, c) not in occupied
+                            for r, c in spaces
+                        ):
+                            configs.append(((col, row), rotation))
+
+            self._config_cache[block_length] = configs
+        
+        # optionally filter only mutations
+        filtered_configs = []
+        if current_pos is not None and current_rot is not None:
+            for config in configs:
+                # same position, changed rotation
+                if config[0] == current_pos and config[1] != current_rot:
+                    filtered_configs.append(config)
+                # same rotation, different position
+                elif config[0] != current_pos and config[1] == current_rot and np.sum(np.abs(np.array(config[0]) - np.array(current_pos))) == 1:
+                    filtered_configs.append(config)
+
+        return filtered_configs if current_pos is not None and current_rot is not None else configs
