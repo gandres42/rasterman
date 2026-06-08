@@ -3,6 +3,7 @@ import numpy as np
 from enum import Enum
 from scipy.spatial.transform import Rotation as sr
 from typing import Optional
+import random
 
 class Orientation(Enum):
     UP = 0
@@ -34,11 +35,25 @@ class GridBlock:
         return occupied
 
 class Grid:
-    def __init__(self, size, real_size):
+    def __init__(self, size, real_size, one_count: int, two_count: int, three_count: int):
         self.blocks: list[GridBlock] = []
         self.size = size
         self.ratio = real_size / size
         self._config_cache: dict[int, list] = {}
+
+        for i in range(one_count):
+            self.random_emplace(1)
+        for i in range(two_count):
+            self.random_emplace(2)
+        for i in range(three_count):
+            self.random_emplace(3)
+
+
+    def random_emplace(self, length: int):
+        new_block_config = random.choice(self.valid_configurations(length, None, None))
+        new_block = GridBlock(length, new_block_config[0], new_block_config[1])
+        self.blocks.append(new_block)
+
 
     def add_block(self, block: GridBlock):
         self.blocks.append(block)

@@ -30,10 +30,9 @@ class Generation:
         img = self.grid.image()
         return np.sum(np.abs(self.base_img - img))
 
-
 def centroids_img(grid: Grid):
     centroids, quats, lens = grid.poses()
-    img = grid.image()
+    img = 1 - grid.image()
     scale = 100
     image = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
     image = cv2.resize(image, (img.shape[1] * scale, img.shape[0] * scale), interpolation=cv2.INTER_NEAREST)
@@ -42,12 +41,14 @@ def centroids_img(grid: Grid):
     return image
 
 def main():
+    # read target image
     base_img = cv2.imread('result.jpg', cv2.IMREAD_GRAYSCALE)
     base_img = (base_img == 0).astype(float)  # ty:ignore[unresolved-attribute]
-    print(base_img)
-    grid = Grid(base_img.shape[0], 2)
-    grid.add_block(GridBlock(length=2, position=(0, 0), rotation=Orientation.RIGHT))
-    grid.add_block(GridBlock(length=1, position=(1, 0), rotation=Orientation.RIGHT))
+
+    # update inventory
+    grid = Grid(base_img.shape[0], 2, 1, 2, 0)
+    # grid.add_block(GridBlock(length=2, position=(0, 0), rotation=Orientation.RIGHT))
+    # grid.add_block(GridBlock(length=1, position=(1, 0), rotation=Orientation.RIGHT))
 
     cv2.namedWindow('centroids', cv2.WINDOW_NORMAL)
     generation = Generation(grid, base_img)
