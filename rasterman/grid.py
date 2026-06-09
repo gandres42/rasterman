@@ -4,6 +4,7 @@ from enum import Enum
 from scipy.spatial.transform import Rotation as sr
 from typing import Optional
 import random
+from copy import deepcopy
 
 class Orientation(Enum):
     UP = 0
@@ -11,7 +12,7 @@ class Orientation(Enum):
     LEFT = 2
     RIGHT = 3
 
-class GridBlock:
+class Block:
     def __init__(self, length, position = (0, 0), rotation = Orientation.UP):
         self.length = length
         self.position = position
@@ -35,28 +36,12 @@ class GridBlock:
         return occupied
 
 class Grid:
-    def __init__(self, size, real_size, one_count: int, two_count: int, three_count: int):
-        self.blocks: list[GridBlock] = []
-        self.size = size
-        self.ratio = real_size / size
-        self._config_cache: dict[int, list] = {}
-
-        for i in range(one_count):
-            self.random_emplace(1)
-        for i in range(two_count):
-            self.random_emplace(2)
-        for i in range(three_count):
-            self.random_emplace(3)
-
-
-    def random_emplace(self, length: int):
-        new_block_config = random.choice(self.valid_configurations(length, None, None))
-        new_block = GridBlock(length, new_block_config[0], new_block_config[1])
-        self.blocks.append(new_block)
-
-
-    def add_block(self, block: GridBlock):
-        self.blocks.append(block)
+    def __init__(self, real_size, goal_img: np.ndarray):
+        self.blocks: list[Block] = []
+        self.size = goal_img.shape[0]
+        self.ratio = real_size / self.size
+        self.config_cache: dict[int, list] = {}
+        self.goal_img = goal_img
 
     def image(self):
         img = np.ones((self.size, self.size))
@@ -96,7 +81,6 @@ class Grid:
             lens.append(block.length)
         return centroids, quats, lens
 
-
     def valid_check(self):
         count = np.zeros((self.size, self.size))
         for block in self.blocks:
@@ -110,39 +94,31 @@ class Grid:
                     return False
         return True
 
-    def valid_configurations(self, block_length: int, current_pos: Optional[tuple], current_rot: Optional[Orientation]):
-        # get all possible configs
+    def add_block(self, block: Block):
+        self.blocks.append(block)
+
+    def valid_configurations(self, block_length: int):
         configs = []
-        if block_length in self._config_cache:
-            configs = self._config_cache[block_length]
-        else:
-            occupied = set()
-            for block in self.blocks:
-                for space in block.occupied_spaces():
-                    occupied.add(space)
+        occupied = set()
+        for block in self.blocks:
+            for space in block.occupied_spaces():
+                occupied.add(space)
 
-            for col in range(self.size):
-                for row in range(self.size):
-                    for rotation in Orientation:
-                        candidate = GridBlock(block_length, (col, row), rotation)
-                        spaces = candidate.occupied_spaces()
-                        if all(
-                            0 <= r < self.size and 0 <= c < self.size and (r, c) not in occupied
-                            for r, c in spaces
-                        ):
-                            configs.append(((col, row), rotation))
+        for col in range(self.size):
+            for row in range(self.size):
+                for rotation in Orientation:
+                    spaces = Block(block_length, (col, row), rotation).occupied_spaces()
+                    if all(0 <= r < self.size and 0 <= c < self.size and (r, c) not in occupied and self.goal_img[r, c] == 1 for r, c in spaces):
+                        configs.append(((col, row), rotation))
 
-            self._config_cache[block_length] = configs
-        
-        # optionally filter only mutations
-        filtered_configs = []
-        if current_pos is not None and current_rot is not None:
-            for config in configs:
-                # same position, changed rotation
-                if config[0] == current_pos and config[1] != current_rot:
-                    filtered_configs.append(config)
-                # same rotation, different position
-                elif config[0] != current_pos and config[1] == current_rot and np.sum(np.abs(np.array(config[0]) - np.array(current_pos))) == 1:
-                    filtered_configs.append(config)
+        return configs
 
-        return filtered_configs if current_pos is not None and current_rot is not None else configs
+    def score(self):
+        return np.sum(np.abs(self.goal_img - self.image()))
+
+
+# class RecursiveSearch:
+#     def __init__(self, one_count: int, two_count: int, three_count: int):
+#         if one_count == 0 and two_count == 0 and three_count = 0
+
+#         self.children = []
