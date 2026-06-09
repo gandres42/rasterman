@@ -37,7 +37,13 @@ class Api:
                 img = cv2.imread(self.current_image_path)
                 if img is None:
                     return None
-                    
+
+                h, w = img.shape[:2]
+                side = min(h, w)
+                y0 = (h - side) // 2
+                x0 = (w - side) // 2
+                img = img[y0:y0 + side, x0:x0 + side]
+
                 self.current_image_data = img
                 self.bg_cache.clear()
                 
