@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from enum import Enum
 from scipy.spatial.transform import Rotation as sr
 from typing import Optional
@@ -13,10 +14,20 @@ class Orientation(Enum):
     RIGHT = 3
 
 class Block:
+    # Caches shared across all blocks; keyed so identical (length, grid) states reuse work.
+    # reset_caches() must run between searches to avoid stale results across goals.
+    _config_cache: dict = {}   # (length, grid_bytes) -> list[config]
+    _goal_windows: dict = {}   # length -> (vertical_goal_mask, horizontal_goal_mask)
+
     def __init__(self, length, position = (0, 0), rotation = Orientation.UP):
         self.length = length
         self.position = position
         self.rotation = rotation
+
+    @classmethod
+    def reset_caches(cls):
+        cls._config_cache = {}
+        cls._goal_windows = {}
 
     def set_pose(self, new_position, new_rotation):
         self.position = new_position
@@ -35,90 +46,100 @@ class Block:
                 occupied = [(self.position[1], self.position[0] + l) for l in range(self.length)]
         return occupied
 
-class Grid:
-    def __init__(self, real_size, goal_img: np.ndarray):
-        self.blocks: list[Block] = []
-        self.size = goal_img.shape[0]
-        self.ratio = real_size / self.size
-        self.config_cache: dict[int, list] = {}
-        self.goal_img = goal_img
+    def emplace(self, grid: np.ndarray):
+        for space in self.occupied_spaces():
+            grid[space[0], space[1]] = 1
 
-    def image(self):
-        img = np.ones((self.size, self.size))
-        for block in self.blocks:
-            for space in block.occupied_spaces():
-                if space[0] >= 0 and space[0] < self.size and space[1] >= 0 and space[1] < self.size:
-                    img[space[0], space[1]] = 0
-        return (img == 0).astype(float)
+    def valid_configurations(self, grid: np.ndarray, goal_img: np.ndarray):
+        L = self.length
+        key = (L, grid.tobytes())
+        cache = Block._config_cache
+        if key not in cache:
+            H, W = grid.shape
+            if L > 1:
+                # The goal footprint per length is constant during a search; cache it once.
+                if L not in Block._goal_windows:
+                    gv = sliding_window_view(goal_img, (L, 1)).reshape(H - L + 1, W, L).sum(axis=2)
+                    gh = sliding_window_view(goal_img, (1, L)).reshape(H, W - L + 1, L).sum(axis=2)
+                    Block._goal_windows[L] = (gv == L, gh == L)
+                goal_v, goal_h = Block._goal_windows[L]
+                free_v = sliding_window_view(grid, (L, 1)).reshape(H - L + 1, W, L).sum(axis=2) == 0
+                free_h = sliding_window_view(grid, (1, L)).reshape(H, W - L + 1, L).sum(axis=2) == 0
+                vi = np.argwhere(free_v & goal_v)
+                hi = np.argwhere(free_h & goal_h)
+                cache[key] = (
+                    [((int(j), int(i) + L - 1), Orientation.UP)   for i, j in vi] +
+                    [((int(j), int(i)),          Orientation.DOWN) for i, j in vi] +
+                    [((int(j) + L - 1, int(i)),  Orientation.LEFT) for i, j in hi] +
+                    [((int(j), int(i)),          Orientation.RIGHT) for i, j in hi]
+                )
+            else:
+                valid_mask = (grid == 0) & (goal_img == 1)
+                cache[key] = [((int(c), int(r)), Orientation.UP) for r, c in np.argwhere(valid_mask)]
+        return cache[key]
 
-    def poses(self):
-        centroids = []
-        quats = []
-        lens = []
+    def simple_str(self):
+        return str(self.length)
 
-        offset = np.array([0, 0, 0])
-        rot = np.eye(3)
-        for block in self.blocks:
-            match block.rotation:
-                case Orientation.UP:
-                    offset = np.array([0.5, (-block.length / 2) + 1])
-                    rot = 0
-                case Orientation.RIGHT:
-                    offset = np.array([block.length / 2, 0.5])
-                    rot = 270
-                case Orientation.DOWN:
-                    offset = np.array([0.5, block.length / 2])
-                    rot = 180
-                case Orientation.LEFT:
-                    offset = np.array([(-block.length / 2) + 1, 0.5])
-                    
-                    rot = 90
-            
-            centroid = np.array([block.position[0], block.position[1]]) + offset
-            centroids.append(centroid.flatten())
-            quat = sr.from_euler('xyz', (0, 0, rot), degrees=True).as_quat()
-            quats.append(quat)
-            lens.append(block.length)
-        return centroids, quats, lens
+class SillySearch:
+    search_cache = {}
+    goal_img = np.zeros((0, 0), dtype=np.uint8)
 
-    def valid_check(self):
-        count = np.zeros((self.size, self.size))
-        for block in self.blocks:
-            for space in block.occupied_spaces():
-                if space[0] >= 0 and space[0] < self.size and space[1] >= 0 and space[1] < self.size:
-                    if count[space[0], space[1]] == 1:
-                        return False
-                    else:
-                        count[space[0], space[1]] = 1
-                else:
-                    return False
-        return True
+    @classmethod
+    def search(cls, goal_img: np.ndarray, blocks: list[Block]):
+        cls.goal_img = (np.asarray(goal_img) > 0).astype(np.uint8)
+        cls.search_cache = {}
+        Block.reset_caches()
+        grid = np.zeros(cls.goal_img.shape, dtype=np.uint8)
+        # Placements only land on empty goal cells, so a length-L block always lowers the
+        # mismatch by exactly L. Track the score incrementally from this baseline.
+        base_score = int(np.count_nonzero(cls.goal_img))
+        best_grid, _ = cls._search(grid, blocks, base_score)
+        return best_grid
 
-    def add_block(self, block: Block):
-        self.blocks.append(block)
+    @classmethod
+    def score(cls, grid):
+        return int(np.count_nonzero(cls.goal_img != grid))
 
-    def valid_configurations(self, block_length: int):
-        configs = []
-        occupied = set()
-        for block in self.blocks:
-            for space in block.occupied_spaces():
-                occupied.add(space)
+    @classmethod
+    def _search(cls, parent_grid: np.ndarray, blocks: list[Block], parent_score: int):
+        if len(blocks) == 0 or parent_score == 0:
+            return parent_grid, parent_score
 
-        for col in range(self.size):
-            for row in range(self.size):
-                for rotation in Orientation:
-                    spaces = Block(block_length, (col, row), rotation).occupied_spaces()
-                    if all(0 <= r < self.size and 0 <= c < self.size and (r, c) not in occupied and self.goal_img[r, c] == 1 for r, c in spaces):
-                        configs.append(((col, row), rotation))
+        key = (parent_grid.tobytes(), tuple(sorted(block.length for block in blocks)))
+        cached = cls.search_cache.get(key)
+        if cached is not None:
+            return cached
 
-        return configs
+        # No placement lands off-goal, so each block lowers the score by exactly its
+        # length. The best any subtree can reach is therefore this bound (place them all);
+        # once we hit it, further search cannot improve, so stop.
+        lower_bound = parent_score - sum(block.length for block in blocks)
 
-    def score(self):
-        return np.sum(np.abs(self.goal_img - self.image()))
+        # Fallback: leave the remaining blocks unplaced if none of them can be placed.
+        best_grid = parent_grid
+        best_score = parent_score
+        tried_lengths = set()
+        for block in blocks:
+            # Same-length blocks are interchangeable; one representative covers them all.
+            if block.length in tried_lengths:
+                continue
+            tried_lengths.add(block.length)
+            new_blocklist = [subblock for subblock in blocks if subblock is not block]
+            for config in block.valid_configurations(parent_grid, cls.goal_img):
+                new_grid = np.copy(parent_grid)
+                block.position = config[0]
+                block.rotation = config[1]
+                block.emplace(new_grid)
+                child_grid, child_score = cls._search(new_grid, new_blocklist, parent_score - block.length)
+                if child_score < best_score:
+                    best_score = child_score
+                    best_grid = child_grid
+                    if best_score <= lower_bound:
+                        break
+            if best_score <= lower_bound:
+                break
 
+        cls.search_cache[key] = (best_grid, best_score)
+        return best_grid, best_score
 
-# class RecursiveSearch:
-#     def __init__(self, one_count: int, two_count: int, three_count: int):
-#         if one_count == 0 and two_count == 0 and three_count = 0
-
-#         self.children = []
