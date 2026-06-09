@@ -6,6 +6,8 @@ from typing import NamedTuple
 import cv2
 import random
 from scipy.spatial.transform import Rotation as sr
+import time
+import random
 
 class Orientation(Enum):
     VERTICAL = 0
@@ -51,9 +53,11 @@ def search(order_list: list, goal_img: np.ndarray):
     queue = [Stage(grid=np.zeros((size, size), dtype=np.uint8), remaining_blocks=order_list, placed_blocks=[])]
     visited = {}
 
+    start_time = time.monotonic()
+
     while len(queue) > 0:
         stage = queue.pop(0)
-
+        elapsed_time = round(time.monotonic() - start_time, 4)
         if len(stage.remaining_blocks) == 0:
             return stage.grid, stage.placed_blocks
         else:
@@ -76,7 +80,13 @@ def search(order_list: list, goal_img: np.ndarray):
                             remaining_blocks=stage.remaining_blocks[1:],
                             placed_blocks = stage.placed_blocks + [(length, placement[0], placement[1])]
                         )
-                        queue.append(new_stage)
+                        if elapsed_time < 20:
+                            queue.append(new_stage)
+                        elif elapsed_time < 25:
+                            queue.insert(random.randrange(0, len(queue)), new_stage)
+                        else:
+                            queue.insert(0, new_stage)
+                            
                         visited[new_grid.tobytes()] = None
 
 def render(goal_img: np.ndarray, solution: np.ndarray) -> str:
@@ -128,8 +138,8 @@ def autoplace(goal_img_path: str, ones: int, twos: int, threes: int, stdout: boo
     return goal_img.shape[0], poses(res_placement)
 
 def main(ones: int, twos: int, threes: int):
-    res_placement = autoplace('result.jpg', ones, twos, threes, stdout=True)
+    res_placement = autoplace('bride.jpg', ones, twos, threes, stdout=True)
     print(res_placement)
 
 if __name__ == '__main__':
-    main(6, 2, 4)
+    main(6, 2, 2)
