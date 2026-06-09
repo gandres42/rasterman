@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from cc_interfaces.msg import Block, StructurePlan  # ty:ignore[unresolved-import]
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
-CONSTRUCTION_SIZE = 2
+CONSTRUCTION_SIZE = 1
 
 class Rasterman(Node):
     def __init__(self):
@@ -28,7 +28,7 @@ class Rasterman(Node):
         self.get_logger().info(f'starting initial plan')
         self.size, self.poses = autoplace(image_path, 6, 2, 2)
         self.get_logger().info(f'initial plan complete')
-        self.ratio = 1
+        self.ratio = CONSTRUCTION_SIZE / self.size
 
     def pub(self):
         centroids, quats, lens = self.poses
