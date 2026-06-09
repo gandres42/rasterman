@@ -52,25 +52,21 @@ def search(order_list: list, goal_img: np.ndarray):
 
     while len(queue) > 0:
         stage = queue.pop(0)
-        print(len(queue), stage.remaining_blocks)
-
-
-
 
         if len(stage.remaining_blocks) == 0:
             byte_key = stage.grid.tobytes()
-            print(byte_key)
             if byte_key not in unique_solutions:
                 unique_solutions[byte_key] = stage.grid
         else:
             length = stage.remaining_blocks[0]
             possible_stages = valid_placements(stage.grid, goal_img, length)
             if len(possible_stages) == 0:
-                new_stage = Stage(
-                    grid=stage.grid,
-                    remaining_blocks=stage.remaining_blocks[1:]
+                queue.append(
+                    Stage(
+                        grid=stage.grid,
+                        remaining_blocks=stage.remaining_blocks[1:]
+                    )
                 )
-                queue.append(new_stage)
             else:
                 
                 for placement in possible_stages:
@@ -86,15 +82,21 @@ def search(order_list: list, goal_img: np.ndarray):
     return random.choice(list(unique_solutions.values()))
 
 
+def render(goal_img: np.ndarray, solution: np.ndarray) -> str:
+    def cells(row):
+        return "".join("██" if cell else "  " for cell in row)
+
+    lw, rw = 2 * goal_img.shape[1], 2 * solution.shape[1]
+    top = "+" + "original".center(lw, "-") + "+" + "recreation".center(rw, "-") + "+"
+    bottom = "+" + "-" * lw + "+" + "-" * rw + "+"
+    body = [f"|{cells(g)}|{cells(s)}|" for g, s in zip(goal_img, solution)]
+    return "\n".join([top, *body, bottom])
+
+
 def main(ones: int, twos: int, threes: int):
     # read target image
     goal_img: np.ndarray = cv2.imread('result.jpg', cv2.IMREAD_GRAYSCALE) # ty:ignore[invalid-assignment]
-    for r in range(goal_img.shape[0]):
-        for c in range(goal_img.shape[1]):
-            if goal_img[r, c] >= 128:
-                goal_img[r, c] = 0
-            else:
-                goal_img[r, c] = 1
+    goal_img = (goal_img < 128).astype(np.uint8)
     
     # make a list
     nums = []
@@ -103,7 +105,7 @@ def main(ones: int, twos: int, threes: int):
     for _ in range(ones): nums.append(1)
     
     # begin loop
-    print(search(nums, goal_img))
+    print(render(goal_img, search(nums, goal_img)))
 
 if __name__ == '__main__':
-    main(60, 20, 100)
+    main(6, 2, 2)
