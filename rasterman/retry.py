@@ -48,15 +48,13 @@ def search(order_list: list, goal_img: np.ndarray):
     size = goal_img.shape[0]
     queue = [Stage(grid=np.zeros((size, size), dtype=np.uint8), remaining_blocks=order_list)]
     visited = {}
-    unique_solutions = {}
+    solution = None
 
-    while len(queue) > 0:
+    while len(queue) > 0 and solution is None:
         stage = queue.pop(0)
 
         if len(stage.remaining_blocks) == 0:
-            byte_key = stage.grid.tobytes()
-            if byte_key not in unique_solutions:
-                unique_solutions[byte_key] = stage.grid
+            solution = stage.grid
         else:
             length = stage.remaining_blocks[0]
             possible_stages = valid_placements(stage.grid, goal_img, length)
@@ -79,7 +77,7 @@ def search(order_list: list, goal_img: np.ndarray):
                         queue.append(new_stage)
                         visited[new_grid.tobytes()] = None
         
-    return random.choice(list(unique_solutions.values()))
+    return solution
 
 
 def render(goal_img: np.ndarray, solution: np.ndarray) -> str:
