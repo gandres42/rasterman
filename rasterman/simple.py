@@ -1,11 +1,12 @@
 import cv2
 import rclpy
-from rclpy.node import Node
 import numpy as np
+from rclpy.node import Node
+from rclpy.parameter import Parameter
+from .search import autoplace
 from cv_bridge import CvBridge
-from .grid import Block, Orientation
-from cc_interfaces.msg import Block, StructurePlan
 from sensor_msgs.msg import Image
+from cc_interfaces.msg import Block, StructurePlan  # ty:ignore[unresolved-import]
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
 CONSTRUCTION_SIZE = 2
@@ -20,18 +21,25 @@ class Rasterman(Node):
         self.viz_pub = self.create_publisher(Image, "rasterman/viz", 10)
         self.create_timer(0.1, self.pub)
 
-        self.grid = Grid(7, CONSTRUCTION_SIZE)
+        # Required parameter: declaring with only a type (no default) means the
+        self.declare_parameter('image_path', Parameter.Type.STRING)
+        image_path = self.get_parameter('image_path').get_parameter_value().string_value
+
+        self.get_logger().info(f'starting initial plan')
+        self.size, self.poses = autoplace(image_path, 6, 2, 2)
+        self.get_logger().info(f'initial plan complete')
+        self.ratio = 1
 
     def pub(self):
-        centroids, quats, lens = self.grid.poses()
+        centroids, quats, lens = self.poses
 
         # create structure plan and posearray
         blocks = []
         poses = []
         for centroid, quat, length in zip(centroids, quats, lens):
             centroid_point = Point()
-            centroid_point.x = (-centroid[1] + (self.grid.size / 2)) * self.grid.ratio
-            centroid_point.y = (-centroid[0] + (self.grid.size / 2)) * self.grid.ratio
+            centroid_point.x = (-centroid[1] + (self.size / 2)) * self.ratio
+            centroid_point.y = (-centroid[0] + (self.size / 2)) * self.ratio
 
             centroid_rot = Quaternion()
             centroid_rot.x = quat[0]
@@ -60,16 +68,6 @@ class Rasterman(Node):
         pose_array.header.frame_id = "rasterman"
         pose_array.poses = poses
         self.posearray_pub.publish(pose_array)
-
-        # create image
-        img = self.grid.image()
-        scale = 100
-        image = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
-        image = cv2.resize(image, (img.shape[1] * scale, img.shape[0] * scale), interpolation=cv2.INTER_NEAREST)
-        for centroid, quat in zip(centroids, quats):
-            image = cv2.circle(image, (int(centroid[0] * scale), int(centroid[1] * scale)), radius=5, color=(0, 255, 0), thickness=-1)
-        self.viz_pub.publish(self.bridge.cv2_to_imgmsg(image, encoding="bgr8"))
-
 
 def main(args=None):
     rclpy.init(args=args)

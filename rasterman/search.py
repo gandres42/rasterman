@@ -89,7 +89,6 @@ def render(goal_img: np.ndarray, solution: np.ndarray) -> str:
     body = [f"|{cells(g)}|{cells(s)}|" for g, s in zip(goal_img, solution)]
     return "\n".join([top, *body, bottom])
 
-
 def poses(placements):
     centroids = []
     quats = []
@@ -112,21 +111,25 @@ def poses(placements):
         lens.append(length)
     return centroids, quats, lens
 
-def main(ones: int, twos: int, threes: int):
+def autoplace(goal_img_path: str, ones: int, twos: int, threes: int, stdout: bool = False):
     # read target image
-    goal_img: np.ndarray = cv2.imread('result.jpg', cv2.IMREAD_GRAYSCALE) # ty:ignore[invalid-assignment]
+    goal_img: np.ndarray = cv2.imread(goal_img_path, cv2.IMREAD_GRAYSCALE) # ty:ignore[invalid-assignment]
     goal_img = (goal_img < 128).astype(np.uint8)
-    
+
     # create placement order
     nums = []
     for _ in range(threes): nums.append(3)
     for _ in range(twos): nums.append(2)
     for _ in range(ones): nums.append(1)
-    
-    # begin search
+
     res_img, res_placement = search(nums, goal_img)
-    print(render(goal_img, res_img))
-    print(poses(res_placement))
+    if stdout:
+        print(render(goal_img, res_img))
+    return goal_img.shape[0], poses(res_placement)
+
+def main(ones: int, twos: int, threes: int):
+    res_placement = autoplace('result.jpg', ones, twos, threes, stdout=True)
+    print(res_placement)
 
 if __name__ == '__main__':
     main(6, 2, 4)
