@@ -52,13 +52,20 @@ def search(order_list: list, goal_img: np.ndarray):
     size = goal_img.shape[0]
     queue = [Stage(grid=np.zeros((size, size), dtype=np.uint8), remaining_blocks=order_list, placed_blocks=[])]
     visited = {}
-
     start_time = time.monotonic()
+    offset = 0
 
     while len(queue) > 0:
         stage = queue.pop(0)
-        elapsed_time = round(time.monotonic() - start_time, 4)
+        elapsed_time = round(time.monotonic() - start_time)
+        if offset >= 500:
+            print(f' time elapsed: {elapsed_time}', end="\r")
+            offset = 0
+        else:
+            offset += 1
+        
         if len(stage.remaining_blocks) == 0:
+            print()
             return stage.grid, stage.placed_blocks
         else:
             length = stage.remaining_blocks[0]
@@ -88,6 +95,7 @@ def search(order_list: list, goal_img: np.ndarray):
                             queue.insert(0, new_stage)
                             
                         visited[new_grid.tobytes()] = None
+    print("no solution found.")
 
 def render(goal_img: np.ndarray, solution: np.ndarray) -> str:
     def cells(row):

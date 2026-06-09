@@ -6,9 +6,10 @@ git clone https://github.com/gandres42/rasterman.git
 git clone https://github.com/npragin/collective-construction.git
 cd ..
 colcon build
-ros2 run rasterman main
+ros2 run rasterman rasterman --ros-args -p image_path:=/home/gavin/Git/rasterman_ws/result.jpg
 ```
 ## Topics
 `/rasterman/structure_plan`: StructurePlan including block placements and types
 `/rasterman/viz`: Image showing image being built and centroids
 `/rasterman/poses`: PoseArray of block centroids, used for visualization/debugging
+
