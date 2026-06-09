@@ -4,6 +4,7 @@ from enum import Enum
 from itertools import permutations
 from typing import NamedTuple
 import cv2
+import random
 
 class Orientation(Enum):
     UP = 0
@@ -73,29 +74,34 @@ def order_proc(order_list: list, goal_img: np.ndarray):
     visited = {}
     next_block = Block(0)
 
+    unique_solutions = {}
+
     while len(queue) > 0:
         stage = queue.pop(0)
 
         # check if reached end
         if len(stage.remaining_blocks) == 0:
-            continue
-
-        # print(len(queue), stage.remaining_blocks)
-        next_block.length = int(stage.remaining_blocks[0])
-        valid_placements = next_block.valid_placements(stage.grid, goal_img)
+            print(len(queue), stage.remaining_blocks)
+            byte_key = stage.grid.tobytes()
+            if byte_key not in unique_solutions:
+                unique_solutions[byte_key] = stage.grid
+        else:
+            print(len(queue), stage.remaining_blocks)
+            next_block.length = int(stage.remaining_blocks[0])
+            valid_placements = next_block.valid_placements(stage.grid, goal_img)
+            
+            for placement in valid_placements:
+                next_block.set_pose(placement)
+                new_grid = next_block.place_into_new_grid(stage.grid)
+                if new_grid.tobytes() not in visited:
+                    new_stage = Stage(
+                        grid=new_grid,
+                        remaining_blocks=stage.remaining_blocks[1:]
+                    )
+                    queue.append(new_stage)
+                    visited[new_grid.tobytes()] = None
         
-        for placement in valid_placements:
-            next_block.set_pose(placement)
-            new_grid = next_block.place_into_new_grid(stage.grid)
-            if new_grid.tobytes() not in visited:
-                new_stage = Stage(
-                    grid=new_grid,
-                    remaining_blocks=stage.remaining_blocks[1:]
-                )
-                queue.append(new_stage)
-                visited[new_grid.tobytes()] = None
-        
-
+    return random.choice(list(unique_solutions.values()))
 
 
 def main(ones: int, twos: int, threes: int):
@@ -108,15 +114,14 @@ def main(ones: int, twos: int, threes: int):
             else:
                 goal_img[r, c] = 1
     
-    # get all unique block placement orders
+    # make a list
     base_str = ""
-    for _ in range(ones): base_str = base_str + "1" 
-    for _ in range(twos): base_str = base_str + "2" 
     for _ in range(threes): base_str = base_str + "3" 
-
-    orders = list(permutations(base_str))
-    print(len(orders))
-    order_proc(list(orders[0]), goal_img)
+    for _ in range(twos): base_str = base_str + "2" 
+    for _ in range(ones): base_str = base_str + "1" 
+    
+    # begin loop
+    print(order_proc(list(base_str), goal_img))
 
 if __name__ == '__main__':
-    main(6, 2, 2)
+    main(6, 3, 3)
