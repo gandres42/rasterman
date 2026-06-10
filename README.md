@@ -6,7 +6,6 @@ git clone https://github.com/gandres42/rasterman.git
 git clone https://github.com/npragin/collective-construction.git
 cd ..
 colcon build
-ros2 run rasterman rasterman --ros-args -p image_path:=/home/gavin/Git/rasterman_ws/result.jpg
 ```
 
 ## Running
