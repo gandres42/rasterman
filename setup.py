@@ -30,7 +30,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'rasterman = rasterman.simple:main',
+            'rasterman = rasterman.rasterman:main',
         ],
     },
 )

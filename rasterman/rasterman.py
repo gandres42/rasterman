@@ -12,8 +12,8 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
 CONSTRUCTION_SIZE = 1
 ONES = 6
-TWOS = 2
-THREES = 2
+TWOS = 3
+THREES = 3
 
 class Rasterman(Node):
     def __init__(self):
