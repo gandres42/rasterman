@@ -15,7 +15,7 @@ ros2 launch rasterman dot.xml
 ros2 launch rasterman line.xml
 ros2 launch rasterman bill.xml
 ```
-To run custom images, run the node directly:
+To run custom images, place your image in `src/rasterman` and run the node directly:
 ```
 ros2 run rasterman rasterman --ros-args -p image:=custom.jpg
 ```
