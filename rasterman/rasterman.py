@@ -1,8 +1,9 @@
+import os
 import cv2
 import rclpy
 import numpy as np
 from rclpy.node import Node
-from rclpy.parameter import Parameter
+from ament_index_python.packages import get_package_share_directory
 from .search import autoplace
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
@@ -10,6 +11,9 @@ from cc_interfaces.msg import Block, StructurePlan  # ty:ignore[unresolved-impor
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
 CONSTRUCTION_SIZE = 1
+ONES = 6
+TWOS = 2
+THREES = 2
 
 class Rasterman(Node):
     def __init__(self):
@@ -17,17 +21,19 @@ class Rasterman(Node):
         self.bridge = CvBridge()
 
         self.struct_pub = self.create_publisher(StructurePlan, "structure_plan", 10)
-        self.posearray_pub = self.create_publisher(PoseArray, "rasterman/poses", 10)
-        self.viz_pub = self.create_publisher(Image, "rasterman/viz", 10)
+        self.posearray_pub = self.create_publisher(PoseArray, "rasterman_poses", 10)
         self.create_timer(0.1, self.pub)
 
-        # Required parameter: declaring with only a type (no default) means the
-        self.declare_parameter('image_path', Parameter.Type.STRING)
-        image_path = self.get_parameter('image_path').get_parameter_value().string_value
+        # Filename of an installed image; override with -p image:=<filename.jpg>
+        self.declare_parameter('image', 'bill.jpg')
+        image_name = self.get_parameter('image').get_parameter_value().string_value
+        image_dir = os.path.join(get_package_share_directory('rasterman'), 'images')
+        image_path = os.path.join(image_dir, image_name)
 
-        self.get_logger().info(f'starting initial plan')
-        self.size, self.poses = autoplace(image_path, 6, 2, 2, stdout=False)
-        self.get_logger().info(f'initial plan complete')
+
+        self.get_logger().info(f'building plan...')
+        self.size, self.poses = autoplace(image_path, ONES, TWOS, THREES, stdout=True)
+        self.get_logger().info(f'plan complete')
         self.ratio = CONSTRUCTION_SIZE / self.size
 
     def pub(self):

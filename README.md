@@ -1,4 +1,4 @@
-## Build and Run
+## Build
 ```
 mkdir -p rasterman_ws/src
 cd rasterman_ws/src
@@ -8,8 +8,20 @@ cd ..
 colcon build
 ros2 run rasterman rasterman --ros-args -p image_path:=/home/gavin/Git/rasterman_ws/result.jpg
 ```
+
+## Running
+The three test options are included as launch files, accessible with:
+```
+ros2 launch rasterman dot.xml
+ros2 launch rasterman line.xml
+ros2 launch rasterman bill.xml
+```
+To run custom images, run the node directly:
+```
+ros2 run rasterman rasterman --ros-args -p image:=custom.jpg
+```
+
 ## Topics
-`/rasterman/structure_plan`: StructurePlan including block placements and types
-`/rasterman/viz`: Image showing image being built and centroids
+`/structure_plan`: StructurePlan including block placements and types
 `/rasterman/poses`: PoseArray of block centroids, used for visualization/debugging
 

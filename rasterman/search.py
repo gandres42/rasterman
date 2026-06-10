@@ -59,7 +59,7 @@ def search(order_list: list, goal_img: np.ndarray):
         stage = queue.pop(0)
         elapsed_time = round(time.monotonic() - start_time)
         if offset >= 500:
-            print(f' time elapsed: {elapsed_time}', end="\r")
+            print(f'time elapsed: {elapsed_time}                   ', end="\r")
             offset = 0
         else:
             offset += 1
@@ -143,7 +143,7 @@ def autoplace(goal_img_path: str, ones: int, twos: int, threes: int, stdout: boo
     res_img, res_placement = search(nums, goal_img)
     if stdout:
         print(render(goal_img, res_img))
-    return goal_img.shape[0], poses(res_placement)
+    return goal_img.shape[0], poses(res_placement), 
 
 def main(ones: int, twos: int, threes: int):
     res_placement = autoplace('bride.jpg', ones, twos, threes, stdout=True)

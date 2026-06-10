@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="rasterman" exec="rasterman" name="rasterman" output="screen">
+    <env name="PYTHONUNBUFFERED" value="1"/>
+    <param name="image" value="mystery.jpg"/>
+  </node>
+</launch>
