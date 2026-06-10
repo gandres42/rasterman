@@ -26,7 +26,7 @@ class Rasterman(Node):
         image_path = self.get_parameter('image_path').get_parameter_value().string_value
 
         self.get_logger().info(f'starting initial plan')
-        self.size, self.poses = autoplace(image_path, 6, 2, 2)
+        self.size, self.poses = autoplace(image_path, 6, 2, 2, stdout=False)
         self.get_logger().info(f'initial plan complete')
         self.ratio = CONSTRUCTION_SIZE / self.size
 
