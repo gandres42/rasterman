@@ -141,7 +141,7 @@ def autoplace(goal_img_path: str, ones: int, twos: int, threes: int, stdout: boo
     return goal_img.shape[0], poses(res_placement), 
 
 def main(ones: int, twos: int, threes: int):
-    res_placement = autoplace('bill.jpg', ones, twos, threes, stdout=True)
+    res_placement = autoplace('line.png', ones, twos, threes, stdout=True)
     print(res_placement)
 
 if __name__ == '__main__':
