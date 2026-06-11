@@ -11,15 +11,16 @@ from cc_interfaces.msg import Block, StructurePlan  # ty:ignore[unresolved-impor
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
 CONSTRUCTION_SIZE = 1
-ONES = 6
-TWOS = 3
-THREES = 3
+ONES = 2
+TWOS = 1
+THREES = 2
 
 class Rasterman(Node):
     def __init__(self):
         super().__init__('rasterman')
         self.bridge = CvBridge()
 
+        self.viz_pub = self.create_publisher(Image, "rastersign", 10)
         self.struct_pub = self.create_publisher(StructurePlan, "structure_plan", 10)
         self.posearray_pub = self.create_publisher(PoseArray, "rasterman_poses", 10)
         self.create_timer(0.1, self.pub)
@@ -32,12 +33,24 @@ class Rasterman(Node):
 
 
         self.get_logger().info(f'building plan...')
-        self.size, self.poses = autoplace(image_path, ONES, TWOS, THREES, stdout=True)
+        self.size, self.poses, self.grid = autoplace(image_path, ONES, TWOS, THREES, stdout=True)
         self.get_logger().info(f'plan complete')
         self.ratio = CONSTRUCTION_SIZE / self.size
 
+
+    def image(self):
+        img = 1 - self.grid
+        scale = 100
+        image = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+        image = cv2.resize(image, (img.shape[1] * scale, img.shape[0] * scale), interpolation=cv2.INTER_NEAREST)
+        self.viz_pub.publish(self.bridge.cv2_to_imgmsg(image, encoding="bgr8"))
+
     def pub(self):
+        if self.poses is None:
+            return
         centroids, quats, lens = self.poses
+
+        self.image()
 
         # create structure plan and posearray
         blocks = []

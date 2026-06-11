@@ -138,7 +138,7 @@ def autoplace(goal_img_path: str, ones: int, twos: int, threes: int, stdout: boo
     res_img, res_placement = search(nums, goal_img)
     if stdout:
         print(render(goal_img, res_img))
-    return goal_img.shape[0], poses(res_placement), 
+    return goal_img.shape[0], poses(res_placement), res_img
 
 def main(ones: int, twos: int, threes: int):
     res_placement = autoplace('line.png', ones, twos, threes, stdout=True)
